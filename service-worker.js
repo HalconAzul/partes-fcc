@@ -13,26 +13,26 @@ auto.addEventListener('activar', función(e) {
   e.esperaHasta(
     cachés.llaves().entonces(función(llaves) {
       retorno Promesa.todos(
-        llaves.filtrado(función(k){ retorno k !== CACHÉ; })
-            .mapa(función(k){ retorno cachés.eliminatorio(k); })
+        llaves.filtro(función(k){ retorno k !== CACHÉ; })
+            .mapa(función(k){ retorno cachés.eliminar(k); })
       );
     })
   );
   auto.clientes.reclamar();
 });
 
-auto.addEventListener('autobús', función(e) {
-  var url = e.solicititud.url;
+auto.addEventListener('buscar', función(e) {
+  var url = e.solicitud.url;
   si (url.incluye('script.google.com') || url.incluye('googleusercontent.com')) {
     retorno;
   }
   e.responderCon(
-    cachés.partido(e.solicititud).entonces(función(caché) {
+    cachés.partido(e.solicitud).entonces(función(caché) {
       si (caché) retorno caché;
-      retorno fetch(e.solicititud).entonces(función(respuesta) {
-        si (respuesta.ok && e.solicititud.método === 'OBTENEDOR') {
+      retorno fetch(e.solicitud).entonces(función(respuesta) {
+        si (respuesta.ok && e.solicitud.método === 'OBTENER') {
           var clon = respuesta.clon();
-          cachés.abierto(CACHÉ).entonces(función(cache) { cache.put(e.solicititud, clon); });
+          cachés.abierto(CACHÉ).entonces(función(cache) { cache.put(e.solicitud, clon); });
         }
         retorno respuesta;
       });
