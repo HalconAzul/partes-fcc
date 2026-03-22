@@ -1,0 +1,26 @@
+{
+  "name": "Partes · FCC Barbetium",
+  "short_name": "Partes FCC",
+  "description": "Gestión de partes de trabajo FCC Barbetium",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#003366",
+  "theme_color": "#003366",
+  "lang": "es",
+  "icons": [
+    {
+      "src": "icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
