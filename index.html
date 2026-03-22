@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+  <meta name="theme-color" content="#003366">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Partes FCC">
+  <title>Partes FCC Barbetium</title>
+  <link rel="manifest" href="manifest.json">
+
+  <!-- Conectar con el servidor de Apps Script lo antes posible -->
+  <link rel="preconnect" href="https://script.google.com">
+  <link rel="preconnect" href="https://script.googleusercontent.com">
+  <link rel="dns-prefetch" href="https://script.google.com">
+  <link rel="dns-prefetch" href="https://script.googleusercontent.com">
+
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    /* Fondo azul FCC mientras el iframe carga — sin pantalla extra */
+    html, body {
+      width: 100%; height: 100%;
+      background: #003366;
+      overflow: hidden;
+    }
+    iframe {
+      width: 100%; height: 100%;
+      border: none; display: block;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- El iframe arranca inmediatamente.
+       La propia app ya tiene su pantalla de carga azul,
+       así que el usuario no ve ninguna pantalla en blanco. -->
+  <iframe
+    src="https://script.google.com/macros/s/AKfycbxftVXA20OJ0WbTkVDsjJ8rmlSfBo5OCpyutCYmSqz42pkR5SvJOGNu7i9NZW-UzUjz/exec"
+    allow="camera; microphone; clipboard-write"
+  ></iframe>
+
+  <script>
+    // Registrar Service Worker para que Chrome ofrezca instalar la app
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('service-worker.js').catch(function(){});
+    }
+  </script>
+
+</body>
+</html>
