@@ -10,44 +10,41 @@
   <meta nombre="título de la aplicación web de Apple-Mobile" contenido="Partes FCC">
   <tipulo>Partes FCC Barbetium</tipulo>
   <link rel="manifestar" href="manifiesto.json">
+
+  <!-- Preconexión a Google para reducir DNS + TLS -->
+  <link rel="preconectar" href="https://script.google.com">
+  <link rel="preconectar" href="https://drive.google.com">
+  <link rel="preconectar" href="https://lh3.googleusercontent.com">
+  <link rel="dns-prefetch" href="https://script.google.com">
+  <link rel="dns-prefetch" href="https://drive.google.com">
+  <link rel="dns-prefetch" href="https://lh3.googleusercontent.com">
+
   <estilo>
- * {margen: 0; aclamado: 0; tamaño de caja: border-box; }
+ *{margen:0;acolchado:0;tamaño de caja:border-box}
+ html,cuerpo{ancho:100%;altura:100%;fondo:#003366;rebosar:oculto}
 
- html, cuerpo {
- ancho: 100%; alta: 100%;
- fondo: #003366;
- rebosar: oculto;
+ #chapoteo{
+ posición:fijo;insertar:0;fondo:#003366;
+ visualizar:flex;dirección-flex:columna;
+ align-items:centro;justificar-contenido:centro;
+ brecha:16px;índice z:10;
+ transición:opacidad . .3s
     }
+ #chapoteo .logotipo{
+ tamaño de fuente:26px;font-weight:900;color:#fff;
+ espaciado entre letras:-.5px;
+ familia de fuentes:-sistema-manzana,Fuente BlinkMacSystem,'Interfaz de usuario de Segoe',sans-serif
+    }
+ #chapoteo .sub{tamaño de fuente:13px;color:rgba(255,255,255,. .55);familia de fuentes:sans-serif}
+ .giro{
+ ancho:36px;altura:36px;
+ frontera:3px sólido rgba(255,255,255,. .25);
+ border-top-color:#fff;radio fronterizo:50%;
+ animación:sp . .7s infinito lineal
+    }
+ @keyframes sp{to{transformar:rotar(360deg)}}
 
- /* Pantalla de carga mientras el iframe arranca */
- #chapoteo {
- posición: fijo; insertar: 0;
- fondo: #003366;
- visualizar: flex; flex-direction: columna;
- align-items: centro; justificar-contenido: centro;
- brecha: 16px; índice z: 10;
- transición: opacidad . .4s;
-    }
- #chapoteo .logotipo {
- tamaño de fuente: 26px; peso de fuente: 900;
- color: #fff; espaciado entre letras: -.5px;
- familia de fuentes: -sistema-manzana, Fuente BlinkMacSystem, 'Interfaz de usuario de Segoe', sans-serif;
-    }
- #chapoteo .sub { tamaño de fuente: 13px; color: rgba(255,255,255,. .55); familia de fuentes: sans-serif; }
- .giro {
- ancho: 36px; alta: 36px;
- frontera: 3px sólido rgba(255,255,255,. .25);
- color del borde superior: #fff;
- radio fronterizo: 50%;
- animación: sp . .7s infinito lineal;
-    }
- @keyframes sp { a { transformar: rotar(360deg); } }
-
- /* El iframe ocupa toda la pantalla */
- #app {
- ancho: 100%; alta: 100%;
- frontera: ninguno; visualizar: bloque;
-    }
+ #app{ancho:100%;altura:100%;frontera:ninguno;visualizar:bloque}
   </estilo>
 </cabeza>
 <cuervo>
@@ -58,31 +55,25 @@
     <div clase="sub">Cargando partes...</div>
   </div>
 
-  <!--
- ⚠️ IMPORTANTE: sustituye la URL de ajo por la URL de tu
- Google Apps Script desplegada (termina en /exec)
- -->
   <iframe
     id="aplicación"
     src="https://script.google.com/macros/s/AKfycbyTe8uqUbL2-1k2qk4neCqYW7WixqwLP-GsC74hJKcJ45M3CEb7z9qYtqdkv-_evDWi/exec"
     permitir="cámara; micrófono; escritura en portapapeles"
+    loading="ansioso"
     onload="ocultarSalpicaduras()"
   ></iframe>
 
   <script>
-    // Registrar el Service Worker (necesario para que Chrome ofrezca "Instalar app")
-    si ('Trabajador de servicio' en navegante) {
+    si('Trabajador de servicio' en navegante){
       navegante.serviceWorker.registrador('service-worker.js').atrapar(función(){});
     }
 
-    // Ocultar pantalla de carga cuando el iframe termina de cargar
-    función ocultarSalpicaduras() {
-      var s = documento.getElementById('salpicadura');
-      si (s) { s.estilo.opacidad = '0'; setTimeout(función(){ s.estilo.visualizar='ninguno'; }, 400); }
+    función ocultarSalpicaduras(){
+      var s=documento.getElementById('salpicadura');
+      si(s){s.estilo.opacidad='0';setTimeout(función(){s.estilo.visualizar='ninguno'},300)}
     }
 
-    // Seguro de fallo: cultivar splash a los 12s une el iframe tarde
-    setTimeout(ocultarSalpicaduras, 12000);
+    setTimeout(ocultarSalpicaduras,8000);
   </script>
 </cuervo>
 </html>
