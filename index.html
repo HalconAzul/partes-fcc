@@ -6,73 +6,47 @@
   <meta nombre="color del tema" contenido="#003366">
   <meta nombre="capaz de aplicaciones web móviles" contenido="sí">
   <meta nombre="apple-mobile-web-app-capable" contenido="sí">
-  <meta nombre="estilo de barra de estado de la aplicación web móvil de Apple" contenido="negro-traducido">
+  <meta nombre="estilo de barra de estado de la aplicación web móvil de Apple" contenido="negro-translúcido">
   <meta nombre="título de la aplicación web de Apple-Mobile" contenido="Partes FCC">
-  <típulo>Partes FCC Barbetium</típulo>
+  <título>Partes FCC Barbetium</título>
   <link rel="manifestar" href="manifiesto.json">
 
+  <!-- Conectar con el servidor de Apps Script lo antes posible -->
   <link rel="preconectar" href="https://script.google.com">
-  <link rel="preconectar" href="https://drive.google.com">
-  <link rel="preconectar" href="https://lh3.googleusercontent.com">
+  <link rel="preconectar" href="https://script.googleusercontent.com">
   <link rel="dns-prefetch" href="https://script.google.com">
-  <link rel="dns-prefetch" href="https://drive.google.com">
-  <link rel="dns-prefetch" href="https://lh3.googleusercontent.com">
+  <link rel="dns-prefetch" href="https://script.googleusercontent.com">
 
   <estilo>
- *{margen:0;acolchado:0;tamaño de caja:border-box}
- html,cuerpo{ancho:100%;altura:100%;fondo:#003366;rebosar:oculto}
-
- #chapoteo{
- posición:fijo;insertar:0;fondo:#003366;
- visualizar:flex;dirección-flex:columna;
- align-items:centro;justificar-contenido:centro;
- brecha:16px;índice z:10;
- transición:opacidad . .3s
+    * { margen: 0; acolchado: 0; box-sizing: border-box; }
+    /* Fondo azul FCC mientras el iframe carga — sin pantalla extra */
+    html, cuerpo {
+      ancho: 100%; altura: 100%;
+      fondo: #003366;
+      rebosar: oculto;
     }
- #chapoteo .logotipo{
- tamaño de fuente:26px;font-weight:900;color:#fff;
- espaciado entre letras:-.5px;
- familia de fuentes:-sistema-manzana,Fuente BlinkMacSystem,'Interfaz de usuario de Segoe',sans-serif
+    iframe {
+      ancho: 100%; altura: 100%;
+      frontera: ninguno; visualizar: bloque;
     }
- #chapoteo .sub{tamaño de fuente:13px;color:rgba(255,255,255,. .55);familia de fuentes:sans-serif}
- .giro{
- ancho:36px;altura:36px;
- frontera:3px sólido rgba(255,255,255,. .25);
- border-top-color:#fff;radio fronterizo:50%;
- animación:sp . .7s infinito lineal
-    }
- @keyframes sp{to{transformar:rotar(360deg)}}
-
- #app{ancho:100%;altura:100%;frontera:ninguno;visualizar:bloque}
   </estilo>
 </cabeza>
-<cuervo>
+<cuerpo>
 
-  <div id="salpicadura">
-    <div clasa="giro"></div>
-    <div clasa="logotipo">Barbetio de la FCC</div>
-    <div clasa="sub">Cargando partes...</div>
-  </div>
-
+  <!-- El iframe arregla inmediatamente.
+ La propiedad app ya tiene su pantalla de carga azul,
+ así que el usuario no ve ninguna pantalla en blanco. -->
   <iframe
-    id="aplicación"
     src="https://script.google.com/macros/s/AKfycbyTe8uqUbL2-1k2qk4neCqYW7WixqwLP-GsC74hJKcJ45M3CEb7z9qYtqdkv-_evDWi/exec"
     permitir="cámara; micrófono; escritura en portapapeles"
-    loading="ansioso"
-    onload="ocultarSalpicaduras()"
   ></iframe>
 
   <script>
-    si('Trabajador de servicio' en navegante){
-      navegante.serviceWorker.registrador('service-worker.js').atrapar(función(){});
+    // Trabajador del Servicio de Registro para que Chrome ofrezca instalar la app
+    si ('Trabajador de servicio' en navegante) {
+      navegante.serviceWorker.registrar('service-worker.js').atrapar(función(){});
     }
-
-    función ocultarSalpicaduras(){
-      var s=documento.getElementById('salpicadura');
-      si(s){s.estilo.opacidad='0';setTimeout(función(){s.estilo.visualizar='ninguno'},300)}
-    }
-
-    setTimeout(ocultarSalpicaduras,8000);
   </script>
-</cuervo>
+
+</cuerpo>
 </html>
