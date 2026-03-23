@@ -1,11 +1,10 @@
 {
-  "name": "Partes · FCC Barbetium",
+  "name": "Partes de Trabajo · FCC Barbetium",
   "short_name": "Partes FCC",
-  "description": "Gestión de partes de trabajo FCC Barbetium",
-  "start_url": "./",
-  "scope": "./",
+  "description": "Registro de partes de trabajo - FCC Barbetium Mijas",
+  "start_url": "./index.html",
   "display": "standalone",
-  "orientation": "portrait-primary",
+  "orientation": "portrait",
   "background_color": "#003366",
   "theme_color": "#003366",
   "lang": "es",
@@ -22,5 +21,7 @@
       "type": "image/png",
       "purpose": "any maskable"
     }
-  ]
+  ],
+  "categories": ["productivity", "utilities"],
+  "screenshots": []
 }
