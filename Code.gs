@@ -17,6 +17,13 @@ var HEADERS = [
 
 // ── Servir la app web ────────────────────────────────────────────
 function doGet(e) {
+  // ── Endpoint API REST (?action=getPartes) ──────────────────────
+  if (e && e.parameter && e.parameter.action === 'getPartes') {
+    var result = getPartes();
+    return ContentService.createTextOutput(JSON.stringify(result))
+      .setMimeType(ContentService.MimeType.JSON);
+  }
+
   // ── Endpoint del manifiesto PWA (?manifest=1) ──────────────────
   if (e && e.parameter && e.parameter.manifest === '1') {
     var appUrl = ScriptApp.getService().getUrl();
@@ -62,6 +69,28 @@ function doGet(e) {
     .setTitle('Partes · FCC Barbetium')
     .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL)
     .addMetaTag('viewport', 'width=device-width, initial-scale=1, maximum-scale=1');
+}
+
+// ── API REST para GitHub Pages (doPost) ──────────────────────────
+// Acepta POST con body application/x-www-form-urlencoded:
+//   action=<nombre>  &  data=<JSON.stringify(params)>
+function doPost(e) {
+  try {
+    var action = e.parameter.action;
+    var data   = e.parameter.data ? JSON.parse(e.parameter.data) : null;
+    var result;
+    if      (action === 'saveParte')     result = saveParte(data);
+    else if (action === 'uploadPhoto')   result = uploadPhoto(data.base64Data, data.filename);
+    else if (action === 'runOCR')        result = runOCR(data);
+    else if (action === 'deleteParte')   result = deleteParte(data);
+    else if (action === 'corregirTexto') result = corregirTexto(data);
+    else result = { status: 'error', message: 'Acción desconocida: ' + action };
+    return ContentService.createTextOutput(JSON.stringify(result))
+      .setMimeType(ContentService.MimeType.JSON);
+  } catch(err) {
+    return ContentService.createTextOutput(JSON.stringify({ status: 'error', message: err.message }))
+      .setMimeType(ContentService.MimeType.JSON);
+  }
 }
 
 // ── Obtener o crear la hoja ──────────────────────────────────────

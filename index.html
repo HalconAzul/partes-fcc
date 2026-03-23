@@ -602,6 +602,37 @@ html,body{height:100%;background:var(--bg);font-family:-apple-system,BlinkMacSys
 
 <script>
 // ════════════════════════════════════════════
+//  URL del backend (Apps Script)
+// ════════════════════════════════════════════
+// Cuando la página se sirve desde Apps Script, <?= appUrl ?> es
+// reemplazado por la URL real.  En GitHub Pages queda como literal
+// y la condición de indexOf detecta que no es una URL válida,
+// usando el fallback hardcodeado.
+var SCRIPT_URL = (function() {
+  var injected = '<?= appUrl ?>';
+  return (injected && injected.indexOf('script.google.com') !== -1)
+    ? injected
+    : 'https://script.google.com/macros/s/AKfycbyoD0Evl8aS7p_jSB3hYio0oUsYYjlgKSS8Bic1nB_-Z02_NO_9q6gwDyo9uzej_v4L/exec';
+})();
+
+// Helper: llama al servidor via fetch (compatible Apps Script y GitHub Pages)
+function callServer(action, params, successFn, failureFn) {
+  var body = new URLSearchParams();
+  body.append('action', action);
+  if (params !== undefined && params !== null) body.append('data', JSON.stringify(params));
+  fetch(SCRIPT_URL, { method: 'POST', body: body, redirect: 'follow' })
+    .then(function(r) { return r.json(); })
+    .then(successFn)
+    .catch(failureFn || function(err) { console.error('[callServer]', action, err); });
+}
+function callServerGet(action, successFn, failureFn) {
+  fetch(SCRIPT_URL + '?action=' + action, { redirect: 'follow' })
+    .then(function(r) { return r.json(); })
+    .then(successFn)
+    .catch(failureFn || function(err) { console.error('[callServerGet]', action, err); });
+}
+
+// ════════════════════════════════════════════
 //  Estado global
 // ════════════════════════════════════════════
 var allPartes  = [];
@@ -771,8 +802,8 @@ function loadPartes() {
     showScreen('s-home');
     setStatus('warn', '⏳ Actualizando desde la hoja...');
   }
-  google.script.run
-    .withSuccessHandler(function(data) {
+  callServerGet('getPartes',
+    function(data) {
       document.getElementById('loading').style.display = 'none';
       if (data && data.error) {
         setStatus('err', '❌ Error al cargar: ' + data.error);
@@ -788,8 +819,8 @@ function loadPartes() {
         }
         renderList(allPartes); updateStats(); showScreen('s-home');
       }
-    })
-    .withFailureHandler(function(err) {
+    },
+    function(err) {
       document.getElementById('loading').style.display = 'none';
       if (!cached) {
         setStatus('err', '❌ Error al conectar: ' + (err.message || 'desconocido'));
@@ -797,13 +828,13 @@ function loadPartes() {
       } else {
         setStatus('warn', '⚠️ Sin conexión — mostrando datos guardados');
       }
-    })
-    .getPartes();
+    }
+  );
 }
 
 function refreshFromServer() {
-  google.script.run
-    .withSuccessHandler(function(data) {
+  callServerGet('getPartes',
+    function(data) {
       if (Array.isArray(data) && data.length > 0) {
         allPartes = data; sortPartes(); syncFormOptions(); saveCache(allPartes);
         var active = document.querySelector('.screen.active');
@@ -811,9 +842,9 @@ function refreshFromServer() {
         setStatus('ok', '✅ Sincronizado · ' + allPartes.length + ' partes');
         setTimeout(function(){ setStatus('',''); }, 3000);
       }
-    })
-    .withFailureHandler(function() { setStatus('warn', '⚠️ Sin conexión — mostrando datos locales'); })
-    .getPartes();
+    },
+    function() { setStatus('warn', '⚠️ Sin conexión — mostrando datos locales'); }
+  );
 }
 
 function sortPartes() {
@@ -1049,8 +1080,8 @@ function runOCR() {
   btn.disabled = true; btn.textContent = '⏳ Analizando...';
   result.classList.remove('show');
   toast('🔍 Analizando imagen con OCR...');
-  google.script.run
-    .withSuccessHandler(function(res) {
+  callServer('runOCR', photoB64,
+    function(res) {
       btn.disabled = false; btn.textContent = '🔍 Analizar OCR';
       if (res && res.status === 'ok' && res.text) {
         var filled = parseAndFill(res.text);
@@ -1068,14 +1099,14 @@ function runOCR() {
         result.classList.add('show');
         toast('❌ Error en OCR');
       }
-    })
-    .withFailureHandler(function(err) {
+    },
+    function(err) {
       btn.disabled = false; btn.textContent = '🔍 Analizar OCR';
       result.textContent = '❌ Error al conectar con el servidor OCR';
       result.classList.add('show');
       toast('❌ Error OCR: ' + (err.message || 'desconocido'));
-    })
-    .runOCR(photoB64);
+    }
+  );
 }
 
 // ── Mapa de equipos: código → descripción completa ──────────────────────────
@@ -1186,8 +1217,8 @@ function saveParte() {
   };
   function doSave(fotoUrl) {
     parte.fotoUrl = fotoUrl || '';
-    google.script.run
-      .withSuccessHandler(function(res) {
+    callServer('saveParte', parte,
+      function(res) {
         btn.disabled = false;
         if (res && res.status === 'ok') {
           toast('✅ Parte guardado en Google Sheets');
@@ -1202,12 +1233,12 @@ function saveParte() {
         } else {
           toast('❌ Error: ' + (res && res.message || 'desconocido'));
         }
-      })
-      .withFailureHandler(function(err) {
+      },
+      function(err) {
         btn.disabled = false;
         toast('❌ Error al guardar: ' + (err.message || 'desconocido'));
-      })
-      .saveParte(parte);
+      }
+    );
   }
   var existingFotoUrl = '';
   if (editMode) {
@@ -1217,13 +1248,13 @@ function saveParte() {
   if (photoB64) {
     toast('📷 Subiendo foto a Drive...');
     var filename = 'parte_' + nhoja + '_' + fecha + '.jpg';
-    google.script.run
-      .withSuccessHandler(function(res) { doSave(res && res.fileUrl ? res.fileUrl : existingFotoUrl); })
-      .withFailureHandler(function(err) {
+    callServer('uploadPhoto', { base64Data: photoB64, filename: filename },
+      function(res) { doSave(res && res.fileUrl ? res.fileUrl : existingFotoUrl); },
+      function(err) {
         toast('⚠️ Error al subir la foto: ' + (err.message || 'intenta con una imagen más pequeña'));
         doSave(existingFotoUrl);
-      })
-      .uploadPhoto(photoB64, filename);
+      }
+    );
   } else {
     doSave(existingFotoUrl);
   }
@@ -1342,16 +1373,16 @@ function doDelete() {
   closeDlg(); if (!currentId) return;
   toast('🗑️ Eliminando...');
   var id = currentId;
-  google.script.run
-    .withSuccessHandler(function(res) {
+  callServer('deleteParte', id,
+    function(res) {
       if (res && res.status === 'ok') {
         toast('✅ Parte eliminado');
         allPartes = allPartes.filter(function(p){ return (gv(p,'ID')||gv(p,'Nº HOJA')) !== id; });
         showScreen('s-home');
       } else { toast('❌ Error al eliminar'); }
-    })
-    .withFailureHandler(function(){ toast('❌ Error al eliminar'); })
-    .deleteParte(id);
+    },
+    function() { toast('❌ Error al eliminar'); }
+  );
 }
 
 // ════════════════════════════════════════════
@@ -1388,8 +1419,8 @@ function corregirCampo(fieldId, btnId) {
   if (!text) { toast('⚠️ El campo está vacío'); return; }
   btn.disabled = true; btn.textContent = '⏳ Corrigiendo...';
   toast('✨ Revisando ortografía y gramática...');
-  google.script.run
-    .withSuccessHandler(function(res) {
+  callServer('corregirTexto', text,
+    function(res) {
       btn.disabled = false; btn.textContent = '✨ Corregir';
       if (res && res.status === 'ok') {
         if (res.corrections === 0) { toast('✅ Sin errores detectados'); return; }
@@ -1398,12 +1429,12 @@ function corregirCampo(fieldId, btnId) {
         setTimeout(function() { el.style.background = ''; el.style.borderColor = ''; }, 2500);
         toast('✅ ' + res.corrections + ' corrección' + (res.corrections > 1 ? 'es' : '') + ' aplicada' + (res.corrections > 1 ? 's' : ''));
       } else { toast('❌ Error al corregir: ' + (res && res.message || 'desconocido')); }
-    })
-    .withFailureHandler(function() {
+    },
+    function() {
       btn.disabled = false; btn.textContent = '✨ Corregir';
       toast('❌ Sin conexión con el corrector');
-    })
-    .corregirTexto(text);
+    }
+  );
 }
 
 // ════════════════════════════════════════════
