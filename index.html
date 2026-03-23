@@ -602,34 +602,45 @@ html,body{height:100%;background:var(--bg);font-family:-apple-system,BlinkMacSys
 
 <script>
 // ════════════════════════════════════════════
-//  URL del backend (Apps Script)
+//  URL del backend y helpers de comunicación servidor
 // ════════════════════════════════════════════
-// Cuando la página se sirve desde Apps Script, <?= appUrl ?> es
-// reemplazado por la URL real.  En GitHub Pages queda como literal
-// y la condición de indexOf detecta que no es una URL válida,
-// usando el fallback hardcodeado.
-var SCRIPT_URL = (function() {
-  var injected = '<?= appUrl ?>';
-  return (injected && injected.indexOf('script.google.com') !== -1)
-    ? injected
-    : 'https://script.google.com/macros/s/AKfycbyoD0Evl8aS7p_jSB3hYio0oUsYYjlgKSS8Bic1nB_-Z02_NO_9q6gwDyo9uzej_v4L/exec';
-})();
+// Modo Apps Script : google.script.run disponible → úsalo directamente
+// Modo GitHub Pages: google.script.run no existe  → usa fetch al SCRIPT_URL
+var SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyoD0Evl8aS7p_jSB3hYio0oUsYYjlgKSS8Bic1nB_-Z02_NO_9q6gwDyo9uzej_v4L/exec';
 
-// Helper: llama al servidor via fetch (compatible Apps Script y GitHub Pages)
+function _hasGSR() {
+  return typeof google !== 'undefined' && google.script && google.script.run;
+}
+
+// Llamada POST genérica (saveParte, runOCR, deleteParte, corregirTexto, uploadPhoto)
 function callServer(action, params, successFn, failureFn) {
+  var errFn = failureFn || function(err) { console.error('[callServer]', action, err); };
+  if (_hasGSR()) {
+    var runner = google.script.run.withSuccessHandler(successFn).withFailureHandler(errFn);
+    // uploadPhoto en el servidor recibe (base64Data, filename) como dos args separados
+    if (action === 'uploadPhoto') { runner.uploadPhoto(params.base64Data, params.filename); }
+    else                          { runner[action](params); }
+    return;
+  }
+  // Fallback fetch para GitHub Pages
   var body = new URLSearchParams();
   body.append('action', action);
   if (params !== undefined && params !== null) body.append('data', JSON.stringify(params));
   fetch(SCRIPT_URL, { method: 'POST', body: body, redirect: 'follow' })
     .then(function(r) { return r.json(); })
-    .then(successFn)
-    .catch(failureFn || function(err) { console.error('[callServer]', action, err); });
+    .then(successFn).catch(errFn);
 }
+
+// Llamada GET (getPartes)
 function callServerGet(action, successFn, failureFn) {
+  var errFn = failureFn || function(err) { console.error('[callServerGet]', action, err); };
+  if (_hasGSR()) {
+    google.script.run.withSuccessHandler(successFn).withFailureHandler(errFn)[action]();
+    return;
+  }
   fetch(SCRIPT_URL + '?action=' + action, { redirect: 'follow' })
     .then(function(r) { return r.json(); })
-    .then(successFn)
-    .catch(failureFn || function(err) { console.error('[callServerGet]', action, err); });
+    .then(successFn).catch(errFn);
 }
 
 // ════════════════════════════════════════════
