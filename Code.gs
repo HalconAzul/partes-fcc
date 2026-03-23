@@ -3,7 +3,7 @@
 //  Archivo: Code.gs  (servidor)
 // ════════════════════════════════════════════════════════════════
 
-var SPREADSHEET_ID    = '1QR8Y88WHMYNcAU8vlNvMkyIgleyQvsKxk2b1LPTe1WI';
+var SPREADSHEET_ID    = '1eWhV_6ekwGuZglgKHnK82uJJdIB4ZeOZ9gZvQpSzVZE';
 var SHEET_NAME        = 'Partes';
 var DRIVE_FOLDER_ID   = '1TYXwYjNymZAWn-0qEdEGRmzEZ7Q867lW';
 
