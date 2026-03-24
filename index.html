@@ -427,7 +427,8 @@ html,body{height:100%;background:var(--bg);font-family:-apple-system,BlinkMacSys
       <div class="row2">
         <div class="fg">
           <label>Equipo / Zona</label>
-          <input type="text" id="f-equipo" placeholder="Ej: Zona Norte">
+          <input type="text" id="f-equipo" placeholder="Ej: 210101 - Ruta H1" list="dl-equipo" autocomplete="off">
+          <datalist id="dl-equipo"></datalist>
         </div>
         <div class="fg">
           <label>Centro</label>
@@ -446,15 +447,8 @@ html,body{height:100%;background:var(--bg);font-family:-apple-system,BlinkMacSys
         </div>
         <div class="fg">
           <label>Modelo</label>
-          <select id="f-modelo">
-            <option value="">— Seleccionar —</option>
-            <option value="VOLQ PLAT.EL">VOLQ PLAT.EL</option>
-            <option value="MIT FUSO">MIT FUSO</option>
-            <option value="ISUZU">ISUZU</option>
-            <option value="MAN">MAN</option>
-            <option value="MERCEDES">MERCEDES</option>
-            <option value="RENAULT">RENAULT</option>
-          </select>
+          <input type="text" id="f-modelo" placeholder="Ej: MIT FUSO" list="dl-modelo" autocomplete="off">
+          <datalist id="dl-modelo"></datalist>
         </div>
       </div>
       <div class="row2">
@@ -646,11 +640,50 @@ function callServerGet(action, successFn, failureFn) {
 // ════════════════════════════════════════════
 //  Estado global
 // ════════════════════════════════════════════
-var allPartes  = [];
-var currentId  = null;
-var editMode   = false;
-var photoB64   = null;
-var photoThumb = null;
+var allPartes    = [];
+var currentId    = null;
+var editMode     = false;
+var photoB64     = null;
+var photoThumb   = null;
+// Config dinámica (cargada desde la hoja)
+var allModelos   = [];   // [{keywords:['VOLQ',...], nombre:'VOLQ PLAT.EL'}, ...]
+var allEquipos   = [];   // [{codigo:'210101', nombre:'210101 - Ruta H1...'}, ...]
+var matriculasMap = {};  // {'6309MJT': 'VOLQ PLAT.EL', ...}
+
+function buildDataLists() {
+  // Datalist de modelos
+  var dlM = document.getElementById('dl-modelo');
+  dlM.innerHTML = '';
+  allModelos.forEach(function(m) {
+    var opt = document.createElement('option'); opt.value = m.nombre; dlM.appendChild(opt);
+  });
+  // Datalist de equipos
+  var dlE = document.getElementById('dl-equipo');
+  dlE.innerHTML = '';
+  allEquipos.forEach(function(e) {
+    var opt = document.createElement('option'); opt.value = e.nombre; dlE.appendChild(opt);
+  });
+}
+
+// Guarda un modelo nuevo en la hoja y actualiza el datalist
+function saveNuevoModelo(nombre, keywords) {
+  allModelos.push({ keywords: keywords.split(',').map(function(k){return k.trim().toUpperCase();}), nombre: nombre });
+  buildDataLists();
+  callServer('addModelo', { keywords: keywords, nombre: nombre },
+    function() { toast('✅ Modelo "' + nombre + '" guardado'); },
+    function() { toast('⚠️ No se pudo guardar el modelo'); }
+  );
+}
+
+// Guarda un equipo nuevo en la hoja y actualiza el datalist
+function saveNuevoEquipo(codigo, nombre) {
+  allEquipos.push({ codigo: codigo, nombre: nombre });
+  buildDataLists();
+  callServer('addEquipo', { codigo: codigo, nombre: nombre },
+    function() { toast('✅ Equipo "' + nombre + '" guardado'); },
+    function() { toast('⚠️ No se pudo guardar el equipo'); }
+  );
+}
 
 function h(s) {
   return String(s == null ? '' : s)
@@ -805,6 +838,16 @@ function saveCache(data) { try { localStorage.setItem('fcc_partes_cache', JSON.s
 function loadCache() { try { return JSON.parse(localStorage.getItem('fcc_partes_cache') || 'null'); } catch(e){ return null; } }
 
 function loadPartes() {
+  // Cargar config dinámica (modelos, equipos, matrículas OCR) en paralelo
+  callServerGet('getConfig', function(cfg) {
+    if (cfg && cfg.status === 'ok') {
+      allModelos    = cfg.modelos    || [];
+      allEquipos    = cfg.equipos    || [];
+      matriculasMap = cfg.matriculas || {};
+      buildDataLists();
+    }
+  });
+
   setStatus('', '');
   var cached = loadCache();
   if (cached && cached.length > 0) {
@@ -1014,7 +1057,7 @@ function resetForm() {
   document.getElementById('f-serv').selectedIndex  = 0;
   document.getElementById('f-serv-custom').style.display = 'none';
   document.getElementById('f-serv-custom').value = '';
-  document.getElementById('f-modelo').selectedIndex = 0;
+  document.getElementById('f-modelo').value = '';
   document.getElementById('f-kms').value = '';
   document.getElementById('f-kml').value = '';
   document.getElementById('f-rsu').checked = false;
@@ -1120,12 +1163,13 @@ function runOCR() {
   );
 }
 
-// ── Mapa de equipos: código → descripción completa ──────────────────────────
-// Añade aquí tantas entradas como necesites: 'CODIGO': 'CODIGO - Descripción'
-var EQUIPOS_MAP = {
-  '210101': '210101 - Ruta H1 y Ruta E.T muebles'
-  // '210102': '210102 - Ruta H2 ...',
-};
+// EQUIPOS_MAP legacy eliminado — se usa allEquipos (dinámico desde la hoja)
+function equipoFromCod(cod) {
+  for (var i = 0; i < allEquipos.length; i++) {
+    if (allEquipos[i].codigo === cod) return allEquipos[i].nombre;
+  }
+  return cod; // fallback: devuelve el código solo
+}
 
 function parseAndFill(text) {
   var all = text || '', filled = [];
@@ -1171,16 +1215,25 @@ function parseAndFill(text) {
   var mKml = all.match(/(?:km\s*ll[ea]|llegada|fin)[\s:]*([0-9]{4,7})/i);
   if (mKms) { set('f-kms', mKms[1]); filled.push('Km Salida'); }
   if (mKml) { set('f-kml', mKml[1]); filled.push('Km Llegada'); }
-  if (/VOLQ/i.test(all))          { set('f-modelo','VOLQ PLAT.EL'); filled.push('Modelo'); }
-  else if (/FUSO/i.test(all))     { set('f-modelo','MIT FUSO');      filled.push('Modelo'); }
-  else if (/ISUZU/i.test(all))    { set('f-modelo','ISUZU');         filled.push('Modelo'); }
-  else if (/\bMAN\b/i.test(all))  { set('f-modelo','MAN');           filled.push('Modelo'); }
-  else if (/MERCEDES/i.test(all)) { set('f-modelo','MERCEDES');      filled.push('Modelo'); }
+  // Modelo: primero por matrícula aprendida, luego por keywords dinámicos
+  var matVal = document.getElementById('f-mat').value.toUpperCase();
+  var modeloAprendido = matVal && matriculasMap[matVal] ? matriculasMap[matVal] : '';
+  if (modeloAprendido) {
+    set('f-modelo', modeloAprendido); filled.push('Modelo');
+  } else {
+    var allUpper = all.toUpperCase();
+    for (var mi = 0; mi < allModelos.length; mi++) {
+      var m = allModelos[mi];
+      var matched = m.keywords.some(function(kw) {
+        return kw.length > 2 ? allUpper.indexOf(kw) !== -1 : new RegExp('\\b' + kw + '\\b').test(allUpper);
+      });
+      if (matched) { set('f-modelo', m.nombre); filled.push('Modelo'); break; }
+    }
+  }
+  // Equipo: código numérico → nombre completo dinámico
   var mEquipo = all.match(/(?:equipo|zona)\s*[:\-]?\s*([0-9A-Z]{2,8})/i);
   if (mEquipo) {
-    var equipoCod  = mEquipo[1];
-    var equipoFull = EQUIPOS_MAP[equipoCod] || equipoCod;
-    set('f-equipo', equipoFull);
+    set('f-equipo', equipoFromCod(mEquipo[1]));
     filled.push('Equipo');
   }
   var mPers = all.match(/([0-9]{5,7})\s*[·\-]?\s*([A-ZÁÉÍÓÚÑ][a-záéíóúñ]+\s+[A-ZÁÉÍÓÚÑ][a-záéíóúñ]+)/);
@@ -1238,6 +1291,32 @@ function saveParte() {
             return String(gv(p,'ID') || gv(p,'Nº HOJA')) !== String(parte.id);
           });
           allPartes.unshift(obj); sortPartes();
+          // ── OCR Learning: aprender matrícula → modelo ──────────────
+          if (parte.mat && parte.modelo) {
+            matriculasMap[parte.mat.toUpperCase()] = parte.modelo;
+            callServer('learnMatricula', { matricula: parte.mat, modelo: parte.modelo }, function(){}, function(){});
+          }
+          // ── Detectar modelo nuevo y ofrecer guardarlo ───────────────
+          var modeloVal = parte.modelo;
+          if (modeloVal) {
+            var modeloConocido = allModelos.some(function(m){ return m.nombre === modeloVal; });
+            if (!modeloConocido) {
+              allModelos.push({ keywords: [modeloVal.toUpperCase()], nombre: modeloVal });
+              buildDataLists();
+              callServer('addModelo', { keywords: modeloVal.toUpperCase(), nombre: modeloVal }, function(){}, function(){});
+            }
+          }
+          // ── Detectar equipo nuevo y ofrecer guardarlo ───────────────
+          var equipoVal = parte.equipo;
+          if (equipoVal) {
+            var equipoConocido = allEquipos.some(function(e){ return e.nombre === equipoVal || e.codigo === equipoVal; });
+            if (!equipoConocido) {
+              var cod = equipoVal.split(/[-–]/)[0].trim();
+              allEquipos.push({ codigo: cod, nombre: equipoVal });
+              buildDataLists();
+              callServer('addEquipo', { codigo: cod, nombre: equipoVal }, function(){}, function(){});
+            }
+          }
           photoB64 = null; photoThumb = null;
           showScreen('s-home');
           setTimeout(function(){ refreshFromServer(); }, 2500);

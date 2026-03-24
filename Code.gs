@@ -6,6 +6,9 @@
 var SPREADSHEET_ID    = '1eWhV_6ekwGuZglgKHnK82uJJdIB4ZeOZ9gZvQpSzVZE';
 var SHEET_NAME        = 'Partes';
 var DRIVE_FOLDER_ID   = '1TYXwYjNymZAWn-0qEdEGRmzEZ7Q867lW';
+var MODELOS_SHEET     = 'Modelos';
+var EQUIPOS_SHEET     = 'Equipos';
+var MATRICULAS_SHEET  = 'OCR_Matriculas';
 
 var HEADERS = [
   'ID', 'FECHA', 'TURNO', 'HORA INICIO', 'HORA FIN',
@@ -20,6 +23,11 @@ function doGet(e) {
   // ── Endpoint API REST (?action=getPartes) ──────────────────────
   if (e && e.parameter && e.parameter.action === 'getPartes') {
     var result = getPartes();
+    return ContentService.createTextOutput(JSON.stringify(result))
+      .setMimeType(ContentService.MimeType.JSON);
+  }
+  if (e && e.parameter && e.parameter.action === 'getConfig') {
+    var result = getConfig();
     return ContentService.createTextOutput(JSON.stringify(result))
       .setMimeType(ContentService.MimeType.JSON);
   }
@@ -79,11 +87,14 @@ function doPost(e) {
     var action = e.parameter.action;
     var data   = e.parameter.data ? JSON.parse(e.parameter.data) : null;
     var result;
-    if      (action === 'saveParte')     result = saveParte(data);
-    else if (action === 'uploadPhoto')   result = uploadPhoto(data.base64Data, data.filename);
-    else if (action === 'runOCR')        result = runOCR(data);
-    else if (action === 'deleteParte')   result = deleteParte(data);
-    else if (action === 'corregirTexto') result = corregirTexto(data);
+    if      (action === 'saveParte')       result = saveParte(data);
+    else if (action === 'uploadPhoto')     result = uploadPhoto(data.base64Data, data.filename);
+    else if (action === 'runOCR')          result = runOCR(data);
+    else if (action === 'deleteParte')     result = deleteParte(data);
+    else if (action === 'corregirTexto')   result = corregirTexto(data);
+    else if (action === 'addModelo')       result = addModelo(data.keywords, data.nombre);
+    else if (action === 'addEquipo')       result = addEquipo(data.codigo, data.nombre);
+    else if (action === 'learnMatricula')  result = learnMatricula(data.matricula, data.modelo);
     else result = { status: 'error', message: 'Acción desconocida: ' + action };
     return ContentService.createTextOutput(JSON.stringify(result))
       .setMimeType(ContentService.MimeType.JSON);
@@ -351,6 +362,130 @@ function corregirTexto(text) {
   } catch(e) {
     return { status: 'error', message: e.message };
   }
+}
+
+// ════════════════════════════════════════════════════════════════
+//  CONFIGURACIÓN DINÁMICA — Modelos, Equipos, OCR Learning
+// ════════════════════════════════════════════════════════════════
+
+function getOrCreateModelos() {
+  var ss = SpreadsheetApp.openById(SPREADSHEET_ID);
+  var s  = ss.getSheetByName(MODELOS_SHEET);
+  if (!s) {
+    s = ss.insertSheet(MODELOS_SHEET);
+    s.getRange(1,1,1,2).setValues([['KEYWORDS','NOMBRE']]);
+    s.getRange(2,1,6,2).setValues([
+      ['VOLQ,VOLQUETE',    'VOLQ PLAT.EL'],
+      ['FUSO,CANTER',      'MIT FUSO'],
+      ['ISUZU',            'ISUZU'],
+      ['MAN',              'MAN'],
+      ['MERCEDES,BENZ',    'MERCEDES'],
+      ['RENAULT',          'RENAULT']
+    ]);
+    s.getRange(1,1,1,2).setFontWeight('bold');
+  }
+  return s;
+}
+
+function getOrCreateEquipos() {
+  var ss = SpreadsheetApp.openById(SPREADSHEET_ID);
+  var s  = ss.getSheetByName(EQUIPOS_SHEET);
+  if (!s) {
+    s = ss.insertSheet(EQUIPOS_SHEET);
+    s.getRange(1,1,1,2).setValues([['CODIGO','NOMBRE']]);
+    s.getRange(2,1,1,2).setValues([['210101','210101 - Ruta H1 y Ruta E.T muebles']]);
+    s.getRange(1,1,1,2).setFontWeight('bold');
+  }
+  return s;
+}
+
+function getOrCreateMatriculas() {
+  var ss = SpreadsheetApp.openById(SPREADSHEET_ID);
+  var s  = ss.getSheetByName(MATRICULAS_SHEET);
+  if (!s) {
+    s = ss.insertSheet(MATRICULAS_SHEET);
+    s.getRange(1,1,1,2).setValues([['MATRICULA','MODELO']]);
+    s.getRange(1,1,1,2).setFontWeight('bold');
+  }
+  return s;
+}
+
+// Devuelve toda la configuración: modelos, equipos y matrículas aprendidas
+function getConfig() {
+  try {
+    var mData  = getOrCreateModelos().getDataRange().getValues();
+    var eData  = getOrCreateEquipos().getDataRange().getValues();
+    var matData= getOrCreateMatriculas().getDataRange().getValues();
+
+    var modelos = [];
+    for (var i = 1; i < mData.length; i++) {
+      if (mData[i][0] && mData[i][1]) {
+        modelos.push({
+          keywords: String(mData[i][0]).split(',').map(function(k){ return k.trim().toUpperCase(); }),
+          nombre:   String(mData[i][1]).trim()
+        });
+      }
+    }
+    var equipos = [];
+    for (var j = 1; j < eData.length; j++) {
+      if (eData[j][0] && eData[j][1]) {
+        equipos.push({ codigo: String(eData[j][0]).trim(), nombre: String(eData[j][1]).trim() });
+      }
+    }
+    var matriculas = {};
+    for (var k = 1; k < matData.length; k++) {
+      if (matData[k][0] && matData[k][1]) {
+        matriculas[String(matData[k][0]).trim().toUpperCase()] = String(matData[k][1]).trim();
+      }
+    }
+    return { status:'ok', modelos:modelos, equipos:equipos, matriculas:matriculas };
+  } catch(err) {
+    return { status:'error', message:err.message };
+  }
+}
+
+// Añade o actualiza un modelo
+function addModelo(keywords, nombre) {
+  try {
+    if (!keywords || !nombre) return { status:'error', message:'Faltan datos' };
+    getOrCreateModelos().appendRow([keywords, nombre]);
+    return { status:'ok' };
+  } catch(err) { return { status:'error', message:err.message }; }
+}
+
+// Añade o actualiza un equipo
+function addEquipo(codigo, nombre) {
+  try {
+    if (!codigo || !nombre) return { status:'error', message:'Faltan datos' };
+    var s    = getOrCreateEquipos();
+    var data = s.getDataRange().getValues();
+    for (var i = 1; i < data.length; i++) {
+      if (String(data[i][0]).trim() === String(codigo).trim()) {
+        s.getRange(i+1,2).setValue(nombre);
+        return { status:'ok', updated:true };
+      }
+    }
+    s.appendRow([codigo, nombre]);
+    return { status:'ok', added:true };
+  } catch(err) { return { status:'error', message:err.message }; }
+}
+
+// OCR Learning: guarda la asociación matrícula → modelo
+function learnMatricula(matricula, modelo) {
+  try {
+    if (!matricula || !modelo) return { status:'ok', skipped:true };
+    var mat  = String(matricula).trim().toUpperCase();
+    var s    = getOrCreateMatriculas();
+    var data = s.getDataRange().getValues();
+    for (var i = 1; i < data.length; i++) {
+      if (String(data[i][0]).trim().toUpperCase() === mat) {
+        if (String(data[i][1]).trim() !== modelo) s.getRange(i+1,2).setValue(modelo);
+        return { status:'ok', updated:true };
+      }
+    }
+    s.appendRow([mat, modelo]);
+    return { status:'ok', added:true };
+  } catch(err) { return { status:'error', message:err.message }; }
 }
 
 // ── Estadísticas rápidas ─────────────────────────────────────────
