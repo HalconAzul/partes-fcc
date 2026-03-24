@@ -1,5 +1,5 @@
-// Service Worker — Partes de Trabajo FCC Barbetium v2
-const CACHE = 'partes-fcc-v2';
+// Service Worker — Partes de Trabajo FCC Barbetium v3
+const CACHE = 'partes-fcc-v3';
 const ASSETS = [
   './index.html',
   './manifest.json',
